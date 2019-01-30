@@ -72,11 +72,19 @@
   [{:keys [access-token-uri client-id client-secret basic-auth?]
     :or {basic-auth? false} :as profile} request]
   (format-access-token
-   (http/post access-token-uri
-     (cond-> {:accept :json, :as  :json,
-              :form-params (request-params profile request)}
-       basic-auth? (add-header-credentials client-id client-secret)
-       (not basic-auth?) (add-form-credentials client-id client-secret)))))
+   (if middleware
+     (http/with-middleware middleware
+       (http/post access-token-uri
+                  (cond-> {:accept :json, :as  :json,
+                           :form-params (request-params profile request)}
+                    basic-auth? (add-header-credentials client-id client-secret)
+                    (not basic-auth?) (add-form-credentials client-id client-secret))))
+     ;;else
+     (http/post access-token-uri
+                (cond-> {:accept :json, :as  :json,
+                         :form-params (request-params profile request)}
+                  basic-auth? (add-header-credentials client-id client-secret)
+                  (not basic-auth?) (add-form-credentials client-id client-secret))))))
 
 (defn state-mismatch-handler [_]
   {:status 400, :headers {}, :body "State mismatch"})
